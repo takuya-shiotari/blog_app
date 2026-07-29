@@ -1,0 +1,1 @@
+pre commit で scripts/verify.sh を強制したい
