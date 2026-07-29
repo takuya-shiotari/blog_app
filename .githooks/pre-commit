@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Enforced via `git config core.hooksPath .githooks` (set up by bin/setup).
+# Blocks the commit if the fast verify loop (lint + tests) fails.
+set -euo pipefail
+
+exec scripts/verify.sh

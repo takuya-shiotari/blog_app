@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bin/setup:*)",
+      "Bash(bin/dev:*)",
+      "Bash(bin/rails:*)",
+      "Bash(bin/rake:*)",
+      "Bash(bin/rubocop:*)",
+      "Bash(bin/brakeman:*)",
+      "Bash(bin/bundler-audit:*)",
+      "Bash(bin/importmap:*)",
+      "Bash(bin/ci:*)",
+      "Bash(scripts/verify.sh:*)",
+      "Bash(bundle install:*)",
+      "Bash(bundle exec:*)",
+      "Bash(bundle check:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout -b*)"
+    ],
+    "deny": [
+      "Bash(bin/rails db:reset*)",
+      "Bash(bin/rails db:drop*)",
+      "Bash(bin/rails db:schema:load*)",
+      "Bash(bin/rails credentials:edit*)",
+      "Bash(bin/rails credentials:show*)",
+      "Bash(bin/rails credentials:diff*)",
+      "Bash(bin/kamal deploy*)",
+      "Bash(bin/kamal remove*)",
+      "Bash(bin/kamal accessory remove*)",
+      "Bash(bin/kamal env push*)",
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit -n*)",
+      "Bash(git clean -f*)",
+      "Bash(git checkout .*)",
+      "Read(./config/master.key)",
+      "Read(./.kamal/secrets)"
+    ]
+  }
+}
