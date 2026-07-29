@@ -1,0 +1,338 @@
+Base directory for this skill: /Users/shiotari/.claude/skills/repo-harness
+
+# Repo Harness セットアップ
+
+任意のリポジトリを Claude Code harness に変換します。
+
+**Harnessの本質**: エージェントがミスをするたびに環境側に恒久的な修正を施す仕組み。LLMはステートレスな関数であり、毎回外から設定を注入する必要があります。
+
+## 5層アーキテクチャ
+
+```
+Layer 1: CLAUDE.md         — プロジェクト憲法（目的・構成・禁止事項）
+Layer 2: .claude/rules/    — ドメイン特化ルール（条件付き遅延ロード）
+Layer 3: .claude/skills/   — 再利用ワークフロー（決定的処理はスクリプトへ）
+Layer 4: .claude/agents/   — 専門サブエージェント（Generator/Evaluator分離）
+Layer 5: .claude/settings.json — 権限制御（allow/deny）
+```
+
+---
+
+## 実行フロー
+
+### Step 1: リポジトリ解析
+
+以下のコマンドを実行してリポジトリの構成を把握する（実行は読み取り専用、安全）:
+
+```bash
+# 言語・フレームワーク検出
+ls -la
+cat package.json 2>/dev/null || cat Cargo.toml 2>/dev/null || cat pyproject.toml 2>/dev/null || cat go.mod 2>/dev/null || cat build.gradle 2>/dev/null || cat pom.xml 2>/dev/null || echo "設定ファイル未検出"
+
+# 既存のClaude設定確認
+ls .claude/ 2>/dev/null && cat CLAUDE.md 2>/dev/null || echo "CLAUDE.md未存在"
+
+# CI/CD確認
+ls .github/workflows/ 2>/dev/null || ls .circleci/ 2>/dev/null || echo "CI未検出"
+
+# テスト構成確認
+ls test/ tests/ spec/ __tests__/ 2>/dev/null || echo "テストディレクトリ未検出"
+```
+
+解析結果を以下の形式でユーザーに提示する:
+
+```
+## 解析結果
+
+**言語/フレームワーク**: [検出結果]
+**ビルドツール**: [検出結果]
+**テストフレームワーク**: [検出結果]
+**CI/CD**: [検出結果]
+**既存CLAUDE.md**: [あり/なし]
+**既存.claude/**: [あり/なし]
+
+**生成予定のファイル**:
+- [ ] CLAUDE.md （[新規作成/追記]）
+- [ ] .claude/settings.json （[新規作成/更新]）
+- [ ] .claude/rules/coding-standards.md
+- [ ] scripts/verify.sh または Makefile ターゲット
+- [ ] .claude/rules/architecture.md （任意）
+
+続けますか？ (yes/no/modify)
+```
+
+ユーザーの承認なしに次ステップへ進まない。
+
+---
+
+### Step 2: Layer 5 — settings.json（権限制御）を最初に設定
+
+権限制御は最も重要なガードレール。先に設定する。
+
+`.claude/settings.json` を生成または更新する。既存ファイルがあれば差分のみ提案:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(make:*)",
+      "Bash(npm run *)",
+      "Bash(cargo *)",
+      "Bash(go *)",
+      "Bash(python *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(eslint *)",
+      "Bash(tsc *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(DROP TABLE*)",
+      "Bash(kubectl delete*)"
+    ]
+  }
+}
+```
+
+**判断基準**:
+- `allow`: 頻繁に使う業務ツール、読み取り・ビルド・テスト系は広く許可
+- `deny`: 削除・強制変更・破壊的操作は明示禁止
+- 静的ブロックなら `deny` で十分（動的判断が必要な場合のみ hooks を検討）
+
+言語に応じてコマンドを調整する（Node/Rust/Go/Python/Java等）。
+
+---
+
+### Step 3: Layer 1 — CLAUDE.md（プロジェクト憲法）を生成
+
+**最重要原則**: 「やらないこと」の定義が最高の費用対効果。
+
+既存の CLAUDE.md がある場合は追記提案のみ行い、上書きしない。
+
+```markdown
+# [プロジェクト名]
+
+## 目的
+[リポジトリの目的を1〜3文で]
+
+## アーキテクチャ概要
+[主要ディレクトリとその役割]
+
+## 技術スタック
+- 言語: [検出した言語]
+- ビルド: [検出したツール]
+- テスト: [検出したフレームワーク]
+
+## 必須ルール
+
+### やること
+- 変更後は必ず `[verifyコマンド]` を実行して成功を確認する
+- コミット前にすべてのテストがパスすることを確認する
+- 既存のコーディング規約（[規約ファイルへのパス]）に従う
+
+### やらないこと（最重要）
+- テストなしで実装を完了したと報告しない
+- `--force` `--no-verify` `-rf` フラグの使用（明示的な指示がない限り）
+- 未使用の抽象化・将来の要件に備えた設計の追加
+- ドキュメントコメントやREADMEを変更なしに更新
+
+## Verify（自己検証ループ）
+
+エージェントは以下のコマンドで成否を自己判定できる:
+
+```bash
+[verifyコマンド]  # 0: 成功, 非0: 失敗
+```
+
+## コンテキスト管理
+
+- ルール詳細: `.claude/rules/`
+- 個人設定: `.claude/settings.local.json`（.gitignore対象）
+```
+
+---
+
+### Step 4: 決定的 verify コマンドを確立（Steering Loopの核心）
+
+Generator-Evaluatorパターンの評価基盤。エージェントが「成功/失敗」を曖昧さなく判定できるコマンドを1つ確立する。
+
+言語別の verify テンプレートを選択・生成:
+
+**Node.js/TypeScript**:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+npm run lint && npm run typecheck && npm test
+```
+
+**Rust**:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+cargo fmt --check && cargo clippy -- -D warnings && cargo test
+```
+
+**Go**:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+go vet ./... && staticcheck ./... && go test ./...
+```
+
+**Python**:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+ruff check . && ruff format --check . && mypy . && pytest
+```
+
+**Java/Kotlin (Gradle)**:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+./gradlew check test
+```
+
+`scripts/verify.sh` として生成し、`chmod +x scripts/verify.sh` を実行する。
+
+Makefile がある場合は以下のターゲットも追加提案:
+```makefile
+.PHONY: verify
+verify:
+	@bash scripts/verify.sh
+```
+
+verify を一度実行して動作確認する。失敗した場合はエラーを調査・修正してから次に進む。
+
+---
+
+### Step 5: Layer 2 — .claude/rules/（ドメイン特化ルール）
+
+CLAUDE.md の肥大化を防ぐため、ドメインルールは rules/ へ委譲する。
+
+`globs` フロントマターで条件付き遅延ロード（コンテキスト節約）:
+
+**`.claude/rules/coding-standards.md`**:
+```markdown
+---
+description: コーディング規約。ソースファイル編集時に適用。
+globs: ["src/**/*.{ts,js,py,rs,go}", "lib/**/*"]
+---
+
+# コーディング規約
+
+[プロジェクト固有の規約を記述]
+
+## 禁止パターン
+- console.log の本番コードへの混入
+- any 型の使用（TypeScript）
+- unwrap() の使用（Rust）
+```
+
+**`.claude/rules/architecture.md`**（大規模プロジェクトの場合）:
+```markdown
+---
+description: アーキテクチャ境界ルール。設計変更時に適用。
+globs: ["src/**/*"]
+---
+
+# アーキテクチャ境界
+
+[レイヤー間の依存関係ルールを記述]
+```
+
+---
+
+### Step 6: Generator-Evaluator パターンの説明（任意セットアップ）
+
+長時間稼働タスクにはエージェント分離パターンを推奨する。
+
+ユーザーに次の説明を提示:
+
+```
+## Steering Loop（操舵ループ）の活用
+
+長時間・反復タスクには以下の3エージェント構成が有効です:
+
+- Planner  : タスクを仕様書に展開
+- Generator: 実装・自己評価（verify実行で即フィードバック）
+- Evaluator: 実際の動作を独立検証（テスト・Playwright等）
+
+Sprint Contract: 実装前に「完了の定義」を明文化し、Generator/Evaluatorが
+共有します（.claude/TASKS.md へ記録）。
+
+セットアップしますか？ (yes/no)
+```
+
+yes の場合、`.claude/agents/evaluator.md` を生成:
+
+```markdown
+---
+name: evaluator
+description: 実装の品質を独立検証する評価エージェント。テスト実行・動作確認・基準チェックを行い、Generatorへ構造化フィードバックを返す。
+---
+
+# Evaluator エージェント
+
+## 評価基準（Sprint Contract）
+[TASKS.mdの完了定義を参照]
+
+## 評価手順
+1. `[verifyコマンド]` を実行（0以外: 即FAIL報告）
+2. 機能テストを実施
+3. アーキテクチャ境界違反をチェック
+4. フィードバックを構造化して返す:
+   - PASS/FAIL の明示
+   - 失敗箇所の具体的な説明
+   - 修正提案（あれば）
+```
+
+---
+
+### Step 7: 完了確認とサマリー
+
+生成したファイルを一覧提示し、verify を最終実行:
+
+```
+## Harness セットアップ完了
+
+### 生成ファイル
+- ✅ CLAUDE.md
+- ✅ .claude/settings.json
+- ✅ .claude/rules/coding-standards.md
+- ✅ scripts/verify.sh
+- ✅ .claude/agents/evaluator.md （選択した場合）
+
+### Verify 実行結果
+[verifyコマンドの実行ログ]
+
+### 次のステップ
+1. `scripts/verify.sh` を実行してハーネスが機能することを確認
+2. CLAUDE.md の「やらないこと」を実際のプロジェクト規約に合わせて編集
+3. `.claude/rules/` にドメイン固有のルールを追加
+4. 個人設定は `.claude/settings.local.json` へ（.gitignoreに追加済み）
+
+### APM対応（任意）
+複数リポジトリへ同じ設定を配布したい場合:
+`apm.yml` で各ツール向け設定を宣言的に管理できます。
+参照: https://zenn.dev/microsoft/articles/agent-package-manager-handson
+```
+
+---
+
+## 実行上の注意事項
+
+1. **既存ファイルを上書きしない**: CLAUDE.md や settings.json が既にある場合は差分提案のみ
+2. **各ステップで確認を取る**: Step 1の解析結果提示→承認→実行 のフローを必ず守る
+3. **verify の成功を確認してから完了報告**: 動かないharnessはharnessではない
+4. **CLAUDE.md の「やらないこと」が最優先**: 過剰な指示より禁止事項が効果的
+5. **Hooksは慎重に**: 静的ブロックはdenyで十分。動的判断が必要な場合にのみ検討
+
+## 参考資料
+
+- [Harness Design for Long-Running Apps](https://www.anthropic.com/engineering/harness-design-long-running-apps) — Generator-Evaluator/Sprint Contract
+- [Claude Code Harness Engineering](https://zenn.dev/sasadango28/articles/claude-code-harness-engineering-20260415) — 5層アーキテクチャ
+- [Agent Package Manager](https://zenn.dev/microsoft/articles/agent-package-manager-handson) — 設定の配布・再利用
