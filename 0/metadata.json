@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KYQ0RAKAHE42EMZFSTCFF0HC",
+  "session_id": "7216e300-e84d-493c-b630-eefaef26ae26",
+  "strategy": "manual-commit",
+  "created_at": "2026-07-29T13:24:24.414618Z",
+  "branch": "ecc",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "app/controllers/blogs_controller.rb",
+    "app/helpers/blogs_helper.rb",
+    "app/models/blog.rb",
+    "app/views/blogs/_blog.html.erb",
+    "app/views/blogs/_blog.json.jbuilder",
+    "app/views/blogs/_form.html.erb",
+    "app/views/blogs/edit.html.erb",
+    "app/views/blogs/index.html.erb",
+    "app/views/blogs/index.json.jbuilder",
+    "app/views/blogs/new.html.erb",
+    "app/views/blogs/show.html.erb",
+    "app/views/blogs/show.json.jbuilder",
+    "config/routes.rb",
+    "db/migrate/20260729131649_create_blogs.rb",
+    "db/schema.rb",
+    "test/controllers/blogs_controller_test.rb",
+    "test/fixtures/blogs.yml",
+    "test/models/blog_test.rb"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "55b9b4ecc007",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 131100,
+    "cache_read_tokens": 1446093,
+    "output_tokens": 5377,
+    "api_call_count": 21
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-07-29T13:24:24.39764Z",
+    "agent_lines": 264,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 264,
+    "total_lines_changed": 265,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 264,
+      "agent_lines_removed": 1
+    }
+  ]
+}

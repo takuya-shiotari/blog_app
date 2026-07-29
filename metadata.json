@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.9.0",
+  "checkpoint_id": "01KYQ0RAKAHE42EMZFSTCFF0HC",
+  "strategy": "manual-commit",
+  "branch": "ecc",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "app/controllers/blogs_controller.rb",
+    "app/helpers/blogs_helper.rb",
+    "app/models/blog.rb",
+    "app/views/blogs/_blog.html.erb",
+    "app/views/blogs/_blog.json.jbuilder",
+    "app/views/blogs/_form.html.erb",
+    "app/views/blogs/edit.html.erb",
+    "app/views/blogs/index.html.erb",
+    "app/views/blogs/index.json.jbuilder",
+    "app/views/blogs/new.html.erb",
+    "app/views/blogs/show.html.erb",
+    "app/views/blogs/show.json.jbuilder",
+    "config/routes.rb",
+    "db/migrate/20260729131649_create_blogs.rb",
+    "db/schema.rb",
+    "test/controllers/blogs_controller_test.rb",
+    "test/fixtures/blogs.yml",
+    "test/models/blog_test.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 131100,
+    "cache_read_tokens": 1446093,
+    "output_tokens": 5377,
+    "api_call_count": 21
+  }
+}
