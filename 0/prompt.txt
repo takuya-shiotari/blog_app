@@ -1,0 +1,5 @@
+/ecc:plan Blog(title,body)を投稿できる機能を実装したい。
+
+---
+
+yes
